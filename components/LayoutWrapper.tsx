@@ -7,6 +7,7 @@ import Footer from './Footer'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
 import { ReactNode } from 'react'
+import Typewriter from 'typewriter-effect'
 
 interface Props {
   children: ReactNode
@@ -18,18 +19,18 @@ const LayoutWrapper = ({ children }: Props) => {
       <div className="flex h-screen flex-col justify-between">
         <header className="flex items-center justify-between py-10">
           <div>
-            <Link href="/" aria-label={siteMetadata.headerTitle}>
-              <div className="flex items-center justify-between">
+            <Link href="/" aria-label="Tailwind CSS Blog">
+              <div className="text-primary-color dark:text-primary-color-dark flex items-center justify-between text-xl font-semibold">
                 <div className="mr-3">
                   <Logo />
                 </div>
-                {typeof siteMetadata.headerTitle === 'string' ? (
-                  <div className="hidden h-6 text-2xl font-semibold sm:block">
-                    {siteMetadata.headerTitle}
-                  </div>
-                ) : (
-                  siteMetadata.headerTitle
-                )}
+                <Typewriter
+                  options={{
+                    strings: `${siteMetadata.headerTitle}`,
+                    autoStart: true,
+                    loop: true,
+                  }}
+                />
               </div>
             </Link>
           </div>
