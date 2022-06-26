@@ -5,22 +5,54 @@ const projectsData = [
     imgSrc: '/static/images/app-band-finder.png',
     href: 'http://hdl.handle.net/10045/121389',
   },
-  /* {
-    title: 'A Search Engine',
-    description: `What if you could look up any information in the world? Webpages, images, videos
-    and more. Google has many features to help you find exactly what you're looking
-    for.`,
-    imgSrc: '/static/images/google.png',
-    href: 'https://www.google.com',
+  {
+    title: 'Amazon Clone with E-Commerce',
+    description: 'Web App Clone built with ReactJS, Firebase & Stripe',
+    imgSrc: '/static/images/portfolio/amazon-challenge.png',
+    href: 'https://challenge-dc26d.web.app/',
   },
   {
-    title: 'The Time Machine',
-    description: `Imagine being able to travel back in time or to the future. Simple turn the knob
-    to the desired date and press "Go". No more worrying about lost keys or
-    forgotten headphones with this simple yet affordable solution.`,
-    imgSrc: '/static/images/time-machine.jpg',
-    href: '/blog/the-time-machine',
-  }, */
+    title: 'Signal Clone',
+    description: 'Multiplatform App Clone built with React Native & Firebase',
+    imgSrc: '/static/images/portfolio/signal-clone.png',
+    href: 'https://signal-clone-yt-build-d7713.web.app/',
+  },
+  {
+    title: 'FriendlyFooders Social Network App (Group)',
+    description: 'Mobile App, User Testing and Design with Ionic, MarvelApp & JustInMind',
+    imgSrc: '/static/images/portfolio/friendlyfooders-app.png',
+    href: 'https://www.miguelfdez.dev',
+  },
+  {
+    title: 'Boardgames Website',
+    description: 'REST API and Web App with Vue.js, NodeJS & Express. Mobile App with IonicVue',
+    imgSrc: '/static/images/portfolio/boardgames-web.png',
+    href: 'https://boardgames-web.netlify.app/',
+  },
+  {
+    title: 'Boardgames App',
+    description: 'Mobile App with IonicVue',
+    imgSrc: '/static/images/portfolio/boardgames-ionic.png',
+    href: 'https://boardgames-ionic.netlify.app/',
+  },
+  {
+    title: 'Clínicia Fisioterapia Website (Group)',
+    description: 'Web App with Laravel, Blade & MySQL',
+    imgSrc: '/static/images/portfolio/clinica-fisioterapia.png',
+    href: 'https://clinica-fisioterapia.herokuapp.com',
+  },
+  {
+    title: 'HearthStone Mobile App',
+    description: 'Ionic & HearthStone API',
+    imgSrc: '/static/images/portfolio/hearthstone-app.png',
+    href: 'https://hearthstone-app.netlify.app',
+  },
+  {
+    title: 'GCS Web App (Group)',
+    description: 'Web Application with AngularJS, Firebase',
+    imgSrc: '/static/images/portfolio/gcs-web.png',
+    href: 'https://www.miguelfdez.dev',
+  },
 ]
 
 export default projectsData
