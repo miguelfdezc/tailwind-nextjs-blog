@@ -1,0 +1,681 @@
+---
+title: 'TCR: test && commit || revert'
+date: '2021-02-02'
+tags: ['TDD', 'Python']
+draft: false
+summary: In this article we make a practical approach of the Test AND Commit OR Revert methodology (based on Kent Beck's articles and code examples)
+authors: ['default']
+---
+
+## Introducción
+
+Kent Beck introdujo por primera vez la idea de _test && commit_ en su artículo [Limbo on the Cheap](https://medium.com/@kentbeck_7670/limbo-on-the-cheap-e4cfae840330). En el artículo comenta que con el objetivo de probar una técnica para escalar la colaboración en los proyectos software llamada [Limbo](https://medium.com/@kentbeck_7670/limbo-scaling-software-collaboration-afd4f00db4b) lleva a cabo su implementación y experimentación.
+
+Es entonces cuando comenta que para asegurarse de que cada uno no rompa el código del otro al propagar los cambios, utiliza el siguiente código, el cual ejecuta un script que realiza la construcción del sistema y ejecuta los tests:
+
+```shell
+$ ./test && commit -am working
+```
+
+Aunque no incluye el _revert_, indica que si los tests fallaban, se revertían los cambios, pero lo explica más en profundidad en otro artículo.
+
+## Desarrollo
+
+El artículo principal dedicado íntegramente a esta técnica es [test && commit || revert](https://medium.com/@kentbeck_7670/test-commit-revert-870bbd756864). En él, se amplía la idea anterior de _test && commit_, con el comando _reset --hard_, provocando por lo tanto que en el caso en el que los tests fallen, no solo no se realice el commit de los cambios sino que estos se vean revertidos.
+
+```shell
+$ ./test && git commit -am working || git reset --hard
+```
+
+En principio, puede parecer una técnica muy arriesgada, e incluso el propio Kent Beck se muestra escéptico en un principio:
+
+> "Oddmund Strømme, the first programmer I’ve found as obsessed with symmetry as I am, suggested that if the tests failed the code should be reverted. I hated the idea so I had to try it."
+
+En general, la mayoría de la gente se hace alguna de estas preguntas (y es completamente normal) en cuanto se le explica en qué consiste esta técnica:
+
+- ¿Cómo vas a progresar si los tests tienen que funcionar siempre? ¿A caso no fallas nunca?
+- ¿Y si escribes un montón de código y se borra? ¿No te frustras?
+
+Y la mejor respuesta a esta pregunta, aunque posteriormente la debatiremos y explicaremos más en profundidad, es la siguiente:
+
+- Si no quieres que se borre un montón de código erróneo, NO escribas un montón de código, es decir, aprende a dar pasos pequeños y en la buena dirección.
+
+> "If you don’t want a bunch of code wiped out then don’t write a bunch of code between greens."
+
+### Incrementos
+
+La base de TCR son los incrementos, ya que ayuda a encontrar una forma **incremental** de realizar el mismo cambio, de una forma mejor y más segura, manteniendo todos los tests "en verde".
+Pero claro, ¿es posible solucionar grandes problemas en un paso pequeño? La respuesta es que la mayoría de las veces esto no es posible, por lo que TCR plantea su funcionamiento en los siguientes pasos:
+
+<img src="img/increments_in_TCR.jpeg" width="250px" align="right" />
+
+- **Añadir un test y que pase**: cada idea implementada tiene que tener asociada un test, lo más pronto posible, aunque no sea exhaustivo o incluso que pruebe únicamente una parte de la funcionalidad, o que simplemente pase.
+
+- **Que pase mejor**: poco a poco, una vez que el test ya pase, hay que reemplazar paso a paso la implementación que habiamos dejado a medias por la real.
+
+- **Hacer fáciles los cambios difíciles**: no hay que llevar a cabo una gran cantidad de cambios simultáneos, es mejor realizar los cambios uno a uno de forma segura, haciendo uso de por ejemplo una función auxiliar que devuelva el valor esperado e ir paso a paso convirtiendo la implementación en la real.
+
+### Comparación con TDD
+
+#### Similitudes
+
+TCR ayuda a utilizar TDD en los siguientes aspectos:
+
+- **No escribir código que no ayude a que pase un test que falla**: esto no se puede controlar del todo, ya que puedes escribir código que no se compruebe en el test. Para controlar esto se debería tener en cuenta la cobertura de los tests e intentar que sea del 100%.
+
+- **No escribir más de un test unitario a la vez**: no es posible ya que si esto sucediera te verías obligado a implementar también más código para que el test pase, el cual significaría un riesgo de borrado mucho mayor.
+
+- **No escribir más código del necesario para pasar el test que falla**: si escribes más del necesario, te arriesgas a que se elimine.
+
+#### Diferencias
+
+La gran diferencia entre TDD y TCR se encuentra en el paso en el que hay que hacer que el test pase: **si al pasar el test falla, se reinicia el intento**.
+
+Por lo tanto en TCR nunca se llega al estado en el que el test está "en rojo", ya que de ser así se vuelve al estado "en verde".
+
+<img src="img/new_style_vs_tdd.jpeg" />
+
+La conclusión es que TDD nos permite quedarnos en la fase "en rojo" y pasar los tests cómodamente, mientras que TCR se intenta no llegar nunca a esa fase, por lo que en parte se puede considerar TCR una versión de TDD sin el estado "en rojo".
+
+### Variaciones
+
+#### Original
+
+La versión original _test && commit || reset --hard_ de Kent Beck.
+Entre sus desventajas tiene por ejemplo el borrado del propio test al fallar en la ejecución u obtener un error de compilación.
+
+```shell
+$ ./test && git commit -am working || git reset — hard
+```
+
+En Pseudocódigo:
+
+```python
+if(test().success)
+    commit()
+else
+    revert()
+```
+
+#### BTCR
+
+Esta variante intenta resolver la desventaja original del borrado en caso de fallo de compilación realizando la construcción primero.
+
+```shell
+$ ./buildIt && (./test && git commit -am working || git reset — hard)
+```
+
+En Pseudocódigo:
+
+```python
+if(build().failed)
+    return
+if(test().success)
+    commit()
+else
+    revert()
+```
+
+#### The Relaxed
+
+Esta variante intenta resolver también la otra gran desventaja del borrado del propio test al fallar la ejecución. Se basa en eliminar únicamente los cambios en el código fuente, y no en el directorio donde se encuentran los tests).
+
+```shell
+$ git checkout HEAD — src/main/
+$ ./buildIt && (./test && git commit -am working || git checkout HEAD — src/main/)
+```
+
+En Pseudocódigo:
+
+```python
+if(build().failed)
+    return
+if(test().success)
+    commit()
+else
+    revert('src/main')
+```
+
+#### The Gentle
+
+Esta variante tiene como objetivo guardar de alguna forma los cambios introducidos anteriormente, para poder así recuperarlos en caso de fallo e intentar encontrar el fallo.
+
+```shell
+$ git stash drop 0 2&>/dev/null; git add -A && git stash push
+$ ./buildIt && (git stash drop 0 2&>/dev/null; git add -A && git stash push)
+# TCR kicks and reverts our code
+$ git stash apply
+```
+
+#### The Split
+
+Consiste en dividir los scripts que realizan la construcción del sistema, ejecutan los tests, etc. en distintos archivos en directorios diferentes.
+
+```shell
+$ cat ./test
+./scripts/buildIt && (./scripts/runTests && ./scripts/commit || ./scripts/revert)
+
+$ tree script
+scripts/
+├── buildIt
+├── commit
+├── revert
+└── runTests
+
+$ cat scripts/buildIt
+./gradlew build -x test
+
+$ cat scripts/commit
+git commit -am working
+
+$ cat scripts/revert
+# git reset --hard
+git checkout HEAD -- src/main/
+
+$ cat scripts/runTests
+./gradlew test
+```
+
+#### The buddy - Continuous TCR
+
+¿Crees que ejecutar manualmente TCR se parece demasiado a TDD?
+Esta variante intenta solucionar esto mismo: en cuanto se introduce un error en tu código, elimina el cambio.
+
+```shell
+while true
+do
+    ./tcr
+done
+
+$ cat tcr
+./buildIt && (./test && git commit -am working || git checkout HEAD — src/main/)
+```
+
+En Pseudocódigo:
+
+```python
+while(true) {
+    tcr()
+}
+function tcr() {
+    if(build().failed)
+        return
+if(test().success)
+        commit()
+    else
+        revert()
+}
+```
+
+#### The watch buddy
+
+Esta variante es muy similar a la anterior, con la diferencia de que no se ejecuta en un bucle infinito, se espera a un cambio en el directorio del código fuente. La introduce Alejandro Marcu en un [vídeo](https://www.youtube.com/watch?v=l5R05yMluxw&feature=youtu.be) en el que realiza pruebas con TCR.
+
+```shell
+while true
+do
+    inotifywait -r -e modify .
+    ./tcr
+done
+
+$ cat tcr
+./buildIt && (./test && git commit -am working || git checkout HEAD — src/main/)
+```
+
+En Pseudocódigo:
+
+```python
+while(true) {
+    block_until_change_in_directory('src')
+    tcr()
+}
+function tcr() {
+    if(build().failed)
+        return
+if(test().success)
+        commit()
+    else
+        revert()
+}
+```
+
+#### The Collaborator
+
+Esta variante incluye un nuevo script, el cual se encarga de subir los cambios y sincronizar los de los compañeros de equipo en caso de que los haya.
+
+```shell
+while true
+do
+    git pull --rebase
+    git push origin master
+done
+```
+
+En Pseudocódigo:
+
+```python
+async {
+    while(true) {
+        Git.pull('rebase')
+        Git.push('origin', 'master')
+    }
+}
+./tcr
+```
+
+#### Local Buddy, Remote Team
+
+Combinación de las variantes _The Collaborator_ y _The Buddy_:
+
+```shell
+do
+    git pull --rebase
+    git push origin master
+done
+## Open new Tab
+while true
+do
+    ./tcr
+done
+```
+
+En Pseudocódigo:
+
+```python
+async {
+    while(true) {
+        Git.pull('rebase')
+        Git.push('origin', 'master')
+    }
+}
+function tcr() { ... }
+async {
+    while(true) {
+        tcr()
+    }
+}
+```
+
+#### The Storyteller: Beyond the Buddy
+
+El objetivo de esta variante es el de conseguir que en vez de simplemente revertir todos los cambios que han provocado que los tests fallen, comunicar el error indicando la línea, el archivo, etc. y preguntando al usuario si desea revertir o no sus cambios.
+
+Thomas Deniffel explica esta variante en un [artículo](https://medium.com/@tdeniffel/tcr-variant-the-storyteller-32c8fdb146f0). En él, además de explicar esta variante de TCR, comenta que su objetivo es el de realizar una implementación que funcione con un chat o incluso con interfaz de voz.
+
+```shell
+# The Buddy
+while true
+do
+    build && ( test && commit || revert )
+done
+
+# Communicate in 'revert'
+$ cat revert
+messageContent = Git.getDiffAndWhatToReset
+message = MessageGenerator.generateWith(messageContent)
+Git.reset
+print message
+```
+
+### Ejemplo
+
+#### Configuración inicial
+
+- Instalamos la Extensión de Visual Studio Code [Run on Save](https://github.com/emeraldwalk/vscode-runonsave)
+
+- En el archivo de configuración del workspace `rope.code-workspace` o en la configuración global de VSCode, añadimos el comando en la configuración de la extensión:
+
+```json
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "emeraldwalk.runonsave": {
+      "commands": [
+        {
+          "match": ".*py",
+          "cmd": "cd ${workspaceFolder} && python ${file} && git commit -am working || git reset --hard"
+        }
+      ]
+    }
+  }
+}
+```
+
+El comando se ejecutará cada vez que se detecte el guardado de un archivo en el proyecto con la extensión `.py` (archivo de Python).
+
+```shell
+cd ${workspaceFolder} && python ${file}
+```
+
+Es necesario acceder al directorio correspondiente al workspace del proyecto.
+Además, en este caso, ejecutaremos el código fuente con python en vez de un script `test` ya que los tests se encuentran al final del archivo.
+
+Cabe destacar que la configuración que he realizado ha sido modificada de la original de los vídeos de Kent Beck, aunque mínimamente, por cambios en la sintaxis de la extensión de VSCode.
+
+#### Repositorio en GitHub
+
+He creado un repositorio público en GitHub con el código del ejemplo completo que Kent Beck realiza en la [Playlist TCR Rope in Python](https://www.youtube.com/playlist?list=PLlmVY7qtgT_nhLyIbeAaUlFOWbWT5y53t).
+
+<img src="img/github_repo.png" width="500px" />
+
+Después de realizar la configuración previa, en el siguiente apartado se ejemplifica el funcionamiento de TCR mediante únicamente unos pasos seleccionados del tutorial de Kent Beck.
+
+#### Rope in Python
+
+Inicialmente, disponemos del siguiente código, correspondiente a la estructura de datos [Rope](<https://en.wikipedia.org/wiki/Rope_(data_structure)>), con:
+
+- el método **to_rope(string)**, el cual convierte un Rope al tipo de dato String.
+- la **clase Rope** con los métodos _substring_ y _concatenate_ ya implementados.
+- las **clases String, Substring y Concatenation** con sus constructores y métodos toString correspondientes.
+- el método **equals(rope, expected)** y los tests que ya han sido probados.
+
+```python
+# Rope
+
+# to do
+# insert
+# delete
+
+# API
+def to_rope(string):
+    return String(string)
+
+class Rope:
+    def substring(self, start, length):
+        return Substring(self, start, length)
+    def concatenate(self, right):
+        return Concatenation(self, right)
+
+class String(Rope):
+    def __init__(self, string):
+        self.string = string
+    def __str__(self):
+        return self.string
+
+class Substring(Rope):
+    def __init__(self, rope, start, length):
+        self.rope = rope
+        self.start = start
+        self.length = length
+    def __str__(self):
+        return str(self.rope)[self.start : self.start + self.length]
+
+class Concatenation(Rope):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+    def __str__(self):
+        return str(self.left) + str(self.right)
+
+# Testing Framework
+def equals(rope, expected):
+    actual = str(rope)
+    if actual == expected:
+        return
+    print(actual, " didn't equal ", expected)
+    raise Exception()
+
+equals(to_rope("abc"), "abc")
+equals(to_rope("abcde").substring(1, 3), "bcd")
+equals(to_rope("abcde").substring(1, 3).substring(1,1), "c")
+equals(to_rope("abc").concatenate(to_rope("de")), "abcde")
+```
+
+Vamos a implementar en este caso el método **Delete**.
+
+- En primer lugar, creamos el nuevo test:
+
+```python
+equals(to_rope("abcde").delete(1, 3), "ae")
+```
+
+- A continuación definimos el método lo más simple posible, aunque la implementación sea falsa:
+
+```python
+def delete(self, start, length):
+    "ae"
+```
+
+- Como hemos olvidado devolver el resultado con _return_, TCR elimina tanto el test como el nuevo código escrito.
+
+En la consola, observamos el siguiente error:
+
+```shell
+None didn't equal ae
+Traceback (most recent call last):
+    File "D:/repos/tcr-rope/rope.py", line 64, in <module>
+        equals(to_rope("abcde").delete(1, 3), "ae")
+    File "D:/repos/tcr-rope/rope.py", line 56, in equals
+        raise Exception()
+Exception
+HEAD is now at a2bf467 working
+```
+
+- Después de volver a escribir el test, esta vez escribimos el código correctamente:
+
+```python
+def delete(self, start, length):
+    return "ae"
+```
+
+En la consola, obtenemos el siguiente mensaje:
+
+```shell
+[master e1db4d5] working
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+```
+
+- Posteriormente, vamos realizando cambios pequeños incrementalmente, hasta implementar todo el código de _delete_, guardando frecuentemente para comprobar que el test pasa:
+
+  - Paso 1:
+
+    ```python
+    def delete(self, start, length):
+        return "a" + "e"
+    ```
+
+    ```shell
+    [master b9a04bf] working
+    1 file changed, 1 insertion(+), 1 deletion(-)
+    ```
+
+  - Paso 2:
+
+    ```python
+    def delete(self, start, length):
+        left = "a"
+        return left + "e"
+    ```
+
+    ```shell
+    [master d66712b] working
+    1 file changed, 2 insertions(+), 1 deletion(-)
+    ```
+
+  - Paso 3:
+
+    ```python
+    def delete(self, start, length):
+        left = "a"
+        right = "e"
+        return left + right
+    ```
+
+    ```shell
+    [master f859c66] working
+    1 file changed, 1 insertion(+), 1 deletion(-)
+    ```
+
+    etc.
+
+- Finalmente, en la implementación inicial del método _delete_ quedaría algo así:
+
+  ```python
+  def delete(self, start, length):
+      left = self.substring(0, start)
+      right = self.substring(start + length, len(self.string) - start - length)
+      return left.concatenate(right)
+  ```
+
+Cabe destacar que posteriormente se extrae a una clase propia como los otros métodos y se realizan varias refactorizaciones utilizando funciones propias de python.
+
+El resultado final, aplicando TCR de la implementación de Rope es el siguiente:
+
+```python
+# Rope
+
+# API
+def to_rope(string):
+    return String(string)
+
+# Implementation
+class Rope:
+    def delete(self, start, length):
+        left = self[0:start]
+        right = self[start + length : len(self)]
+        return left + right
+
+    def insert(self, rope, start):
+        left = self[0:start]
+        right = self[start : len(self)]
+        return left + rope + right
+
+    def __add__(self, addend):
+        return Concatenation(self, addend)
+
+    def __getitem__(self, index):
+        if type(index) == int:
+            return self.__get_single_item__(index)
+        return Substring(self, index.start, index.stop - index.start)
+
+    def __len__(self):
+        raise Exception("Should have been overriden")
+
+    def __get_single_item__(self, index):
+        raise Exception("Should have been overriden")
+
+
+class String(Rope):
+    def __init__(self, string):
+        self.string = string
+
+    def __str__(self):
+        return self.string
+
+    def __len__(self):
+        return len(self.string)
+
+    def __get_single_item__(self, index):
+        return self.string[index]
+
+class Substring(Rope):
+    def __init__(self, rope, start, length):
+        self.rope = rope
+        self.start = start
+        self.leng = length
+
+    def __str__(self):
+        return str(self.rope)[self.start : self.start + self.leng]
+
+    def __len__(self):
+        return self.leng
+
+    def __get_single_item__(self, index):
+        return self.rope[index + self.start]
+
+class Concatenation(Rope):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        return str(self.left) + str(self.right)
+
+    def __len__(self):
+        return len(self.left) + len(self.right)
+
+    def __get_single_item__(self, index):
+        if index < len(self.left):
+            return self.left[index]
+        else:
+            return self.right[index - len(self.left)]
+
+
+# Testing Framework
+def equals(rope, expected):
+    actual = str(rope)
+    if actual == expected:
+        return
+    print(actual, "didn't equal", expected)
+    raise Exception()
+
+
+equals(to_rope("abc"), "abc")
+equals(to_rope("abcde")[1:4], "bcd")
+equals(to_rope("abcde")[1:4][1:2], "c")
+equals(to_rope("abc") + to_rope("de"), "abcde")
+equals(to_rope("abcde").delete(1, 3), "ae")
+
+assert len(to_rope("abcde")[1:4]) == 3
+assert len(to_rope("abc") + to_rope("de")) == 5
+
+equals(to_rope("abe").insert(to_rope("cd"), 2), "abcde")
+
+equals(to_rope("abcde")[3], "d")
+equals((to_rope("abc") + to_rope("de"))[3], "d")
+equals(to_rope("abcde")[0:4][3], "d")
+```
+
+## Conclusiones
+
+En general, he podido observar que TCR es muy útil para aprender a implementar cambios y a refactorizar paso a paso.
+Puede que al principio parezca un poco tedioso tener que reescribir el código, pero precisamente por eso es por lo que acabas escribiendo menos código, optimizando y dándole valor a los tests. Como dice Kent Beck en su famosa frase:
+
+> "Make the change easy and then make the easy change" - _Kent Beck_
+
+Por lo tanto, recomendaría a todo el mundo que probase esta técnica, la original, bien sea con un ejemplo sencillo o no tanto, ya que considero que también ayuda a entender parte de TDD, cambiando tu punto de vista, puede que de una forma más forzosa, pero esto se puede mitigar con las variaciones como ya hemos visto.
+
+En cuanto a mí y al efecto de TCR, decir que considero necesario probar el original pero para el día a día utilizaría por ejemplo la variación **The Relaxed** o **The Gentle**, puede que incluso **The Buddy** en alguna de sus versiones.
+
+Por ejemplo realizando el ejemplo me he dado cuenta de que a veces me encontraba haciendo `Ctrl+Z` para volver a obtener el código que fallaba y continuar desde ahí.
+
+De hecho el propio Kent Beck en otro ejemplo de TCR, el de [substring, TCR style](https://www.youtube.com/watch?v=ZrHBVTCbcE0) se crea un archivo en el que guarda los mensajes de error cada vez que reinicia para guardar el output y los logs de errores y así poder encontrar el fallo en su código.
+
+Utiliza el siguiente comando con la extensión Run on Save, en el cual añade una redirección del stderror al stdout y lo guarda en un fichero llamado `tcrfeedback`:
+
+```
+
+cd ${workspaceFolder} && python ${file} > ../tcrfeedback 2>&1 && git commit -am working || git reset --hard
+
+```
+
+## Bibliografía
+
+- Artículos de Kent Beck:
+
+  - [test && commit || revert](https://medium.com/@kentbeck_7670/test-commit-revert-870bbd756864)
+  - [Limbo on the Cheap](https://medium.com/@kentbeck_7670/limbo-on-the-cheap-e4cfae840330)
+
+- Vídeos de YouTube:
+
+  - [Playlist TCR Rope in Python](https://www.youtube.com/playlist?list=PLlmVY7qtgT_nhLyIbeAaUlFOWbWT5y53t)
+  - [substring, TCR style](https://www.youtube.com/watch?v=ZrHBVTCbcE0), [TCR in VSCode](https://www.youtube.com/watch?v=IIKndRX5qHw)
+  - [Understanding Legacy Code with TCR](https://www.youtube.com/watch?v=FFzHOyFeovE)
+
+- Otros artículos:
+
+  - [TCR. How to use? Alternative to TDD?](https://medium.com/@tdeniffel/tcr-test-commit-revert-a-test-alternative-to-tdd-6e6b03c22bec), [TCR Tool](https://medium.com/@tdeniffel/tcr-tool-test-commit-revert-8aa91d26e61f), [TCR Variants](https://medium.com/@tdeniffel/tcr-variants-test-commit-revert-bf6bd84b17d3) - Thomas Deniffel
+  - [Test && Commit || Revert (TCR)](https://www.honeybadger.io/blog/ruby-tcr-test-commit-revert/) - David Tanzer
+  - [Test-Commit-Revert: A Useful Workflow for Testing Legacy Code in Ruby](https://www.davidtanzer.net/david's%20blog/2019/03/06/test-commit-revert.html) - José M. Gilgado
+
+- Podcast:
+
+  - [The HanselMinutes Podcast](https://www.hanselminutes.com/663/test-commit-revert-with-kent-beck) - Scott Hanselman
+
+- Código del ejemplo:
+
+  - [miguelfdezc/tcr-rope](https://github.com/miguelfdezc/tcr-rope)
