@@ -9,8 +9,6 @@ linkedin: https://www.linkedin.com/in/miguelfdezc
 github: https://github.com/miguelfdezc
 ---
 
-# About me
-
 My name is Miguel, I'm a Software Engineer. I am passionate about Web Development, always learning new technologies and improving my skills.
 
 ---
